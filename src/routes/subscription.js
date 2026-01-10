@@ -22,19 +22,21 @@ router.post('/checkout', authenticate, async (req, res) => {
       payment_method_types: ['card'],
       mode: 'subscription',
       customer_email: req.user.email,
+    
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: 'pln',
             product_data: {
               name: `Subscription for ${devicesCount} device(s)`,
             },
-            unit_amount: Math.round(price * 100),
+            unit_amount: Math.round(price * 100), // grosze
             recurring: { interval: 'month' },
           },
           quantity: 1,
         },
       ],
+    
       success_url: `${process.env.FRONTEND_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/dashboard`,
       metadata: {
@@ -42,6 +44,7 @@ router.post('/checkout', authenticate, async (req, res) => {
         devicesCount: devicesCount.toString(),
       },
     });
+    
 
     res.json({ url: session.url });
   } catch (error) {
