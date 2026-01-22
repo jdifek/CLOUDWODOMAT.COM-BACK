@@ -1,4 +1,5 @@
 import express from 'express';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { PrismaClient } from '@prisma/client';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
@@ -12,7 +13,6 @@ router.use(authenticate, requireAdmin);
 router.post('/users', async (req, res) => {
   try {
     const { email, password, name, surname, phone, company, role } = req.body;
-    const bcrypt = require('bcryptjs');
     
     const passwordHash = await bcrypt.hash(password, 10);
     
@@ -23,6 +23,8 @@ router.post('/users', async (req, res) => {
     const { passwordHash: _, ...userData } = user;
     res.json(userData);
   } catch (error) {
+    console.log(error, 'error');
+    
     if (error.code === 'P2002') {
       return res.status(400).json({ error: 'Email already exists' });
     }

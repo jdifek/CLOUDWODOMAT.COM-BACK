@@ -19,6 +19,7 @@ router.post('/checkout', authenticate, async (req, res) => {
     const price = basePrice * devicesCount;
 
     const session = await stripe.checkout.sessions.create({
+      // Явно указываем только card, исключая link
       payment_method_types: ['card'],
       mode: 'subscription',
       customer_email: req.user.email,
@@ -30,7 +31,7 @@ router.post('/checkout', authenticate, async (req, res) => {
             product_data: {
               name: `Subscription for ${devicesCount} device(s)`,
             },
-            unit_amount: Math.round(price * 100), // grosze
+            unit_amount: Math.round(price * 100),
             recurring: { interval: 'month' },
           },
           quantity: 1,
@@ -44,7 +45,6 @@ router.post('/checkout', authenticate, async (req, res) => {
         devicesCount: devicesCount.toString(),
       },
     });
-    
 
     res.json({ url: session.url });
   } catch (error) {
