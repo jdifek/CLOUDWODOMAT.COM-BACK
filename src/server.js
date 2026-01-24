@@ -6,6 +6,7 @@ import userRoutes from './routes/user.js';
 import adminRoutes from './routes/admin.js';
 import subscriptionRoutes from './routes/subscription.js';
 import webhookRoutes from './routes/webhook.js';
+import settingsRoutes from './routes/settings.js';
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ const app = express();
 app.use(cors());
 app.use('/webhook', webhookRoutes);
 app.use(express.json());
+app.use('/api/settings', settingsRoutes);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
