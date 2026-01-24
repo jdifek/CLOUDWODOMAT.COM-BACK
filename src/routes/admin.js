@@ -41,6 +41,7 @@ router.delete('/users/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete user' });
   }
 });
+
 // Создание подписки
 router.post('/subscriptions', async (req, res) => {
   try {
@@ -95,6 +96,7 @@ router.delete('/subscriptions/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete subscription' });
   }
 });
+
 // Добавление устройства конкретному пользователю
 router.post('/users/:userId/devices', async (req, res) => {
   try {
@@ -110,6 +112,7 @@ router.post('/users/:userId/devices', async (req, res) => {
     res.status(500).json({ error: 'Failed to create device' });
   }
 });
+
 router.get('/users', async (req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -175,13 +178,18 @@ router.post('/users/:id/impersonate', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
 
-    const token = jwt.sign(
+    // Создаем токен для impersonation
+    const impersonationToken = jwt.sign(
       { userId: user.id, role: user.role, impersonatedBy: req.user.id },
       process.env.JWT_SECRET,
-      { expiresIn: '1h' }
+      { expiresIn: '4h' }
     );
 
-    res.json({ token });
+    // Возвращаем оба токена
+    res.json({ 
+      token: impersonationToken,
+      adminToken: req.headers.authorization?.split(' ')[1] // Оригинальный токен админа
+    });
   } catch (error) {
     res.status(500).json({ error: 'Failed to impersonate user' });
   }
