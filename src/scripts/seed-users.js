@@ -35,6 +35,8 @@ async function main() {
       name: 'Admin',
       surname: 'Wodomat',
       phone: '+48123456789',
+      appid: '82ec629a2603b1578ba2add80e647912',
+      saler: 'wodomat2025',
       company: 'Wodomat System',
     },
   });
@@ -45,7 +47,6 @@ async function main() {
   console.log('👤 Creating test user...');
   
   const userPassword = await bcrypt.hash('user123', 10);
-  
   const testUser = await prisma.user.upsert({
     where: { email: 'user@test.com' },
     update: {},
@@ -57,9 +58,10 @@ async function main() {
       surname: 'User',
       phone: '+48987654321',
       company: 'Test Company',
+      appid: '82ec629a2603b1578ba2add80e647912',
+      saler: 'wodomat2025',
     },
   });
-  
   console.log(`✅ Test user: ${testUser.email} (password: user123)`);
 
   // 4. Создаём тестовые устройства для пользователя

@@ -9,28 +9,6 @@ const prisma = new PrismaClient();
 
 router.use(authenticate, requireAdmin);
 
-// Создание нового пользователя
-router.post('/users', async (req, res) => {
-  try {
-    const { email, password, name, surname, phone, company, role } = req.body;
-    
-    const passwordHash = await bcrypt.hash(password, 10);
-    
-    const user = await prisma.user.create({
-      data: { email, passwordHash, name, surname, phone, company, role: role || 'USER' },
-    });
-
-    const { passwordHash: _, ...userData } = user;
-    res.json(userData);
-  } catch (error) {
-    console.log(error, 'error');
-    
-    if (error.code === 'P2002') {
-      return res.status(400).json({ error: 'Email already exists' });
-    }
-    res.status(500).json({ error: 'Failed to create user' });
-  }
-});
 
 // Удаление пользователя
 router.delete('/users/:id', async (req, res) => {
@@ -151,14 +129,36 @@ router.get('/users/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch user' });
   }
 });
+// Создание нового пользователя
+router.post('/users', async (req, res) => {
+  try {
+    const { email, password, name, surname, phone, company, role, appid, saler } = req.body;
+    
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    const user = await prisma.user.create({
+      data: { email, passwordHash, name, surname, phone, company, role: role || 'USER', appid, saler },
+    });
 
+    const { passwordHash: _, ...userData } = user;
+    res.json(userData);
+  } catch (error) {
+    console.log(error, 'error');
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'Email already exists' });
+    }
+    res.status(500).json({ error: 'Failed to create user' });
+  }
+});
+
+// Обновление пользователя
 router.put('/users/:id', async (req, res) => {
   try {
-    const { name, surname, phone, company, role } = req.body;
+    const { name, surname, phone, company, role, appid, saler } = req.body;
 
     const user = await prisma.user.update({
       where: { id: req.params.id },
-      data: { name, surname, phone, company, role },
+      data: { name, surname, phone, company, role, appid, saler },
     });
 
     const { passwordHash, ...userData } = user;
@@ -167,7 +167,6 @@ router.put('/users/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to update user' });
   }
 });
-
 router.post('/users/:id/impersonate', async (req, res) => {
   try {
     const user = await prisma.user.findUnique({
