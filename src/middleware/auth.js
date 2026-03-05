@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import prisma from "../utils/prisma.js";
 
-const prisma = new PrismaClient();
 
 export const authenticate = async (req, res, next) => {
   try {
@@ -10,9 +9,9 @@ export const authenticate = async (req, res, next) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await prisma.user.findUnique({ where: { id: decoded.userId } });
-    
+
     if (!user) return res.status(401).json({ error: 'Invalid token' });
-    
+
     req.user = user;
     next();
   } catch (error) {

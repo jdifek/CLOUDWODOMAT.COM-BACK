@@ -1,9 +1,8 @@
 import express from 'express';
 import Stripe from 'stripe';
-import { PrismaClient } from '@prisma/client';
+import prisma from "../utils/prisma.js";
 
 const router = express.Router();
-const prisma = new PrismaClient();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 router.post('/stripe', express.raw({ type: 'application/json' }), async (req, res) => {
@@ -63,7 +62,7 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
 
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
-        
+
         await prisma.subscription.updateMany({
           where: { stripeSubscriptionId: subscription.id },
           data: {
@@ -76,7 +75,7 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
 
       case 'customer.subscription.deleted': {
         const subscription = event.data.object;
-        
+
         await prisma.subscription.updateMany({
           where: { stripeSubscriptionId: subscription.id },
           data: { status: 'CANCELED' },

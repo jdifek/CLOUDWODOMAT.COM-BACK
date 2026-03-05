@@ -1,13 +1,12 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import { body, validationResult } from 'express-validator';
 import { generatePassword } from '../utils/password.js';
 import { sendPasswordEmail } from '../utils/email.js';
+import prisma from "../utils/prisma.js";
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.post('/register',
   body('email').isEmail(),

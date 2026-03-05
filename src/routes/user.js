@@ -1,11 +1,10 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
+import prisma from "../utils/prisma.js";
 import { authenticate } from '../middleware/auth.js';
 import { body, validationResult } from 'express-validator';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.get('/me', authenticate, async (req, res) => {
   try {
@@ -55,7 +54,7 @@ router.put('/me/password',
 
       const user = await prisma.user.findUnique({ where: { id: req.user.id } });
       const valid = await bcrypt.compare(currentPassword, user.passwordHash);
-      
+
       if (!valid) {
         return res.status(401).json({ error: 'Current password is incorrect' });
       }

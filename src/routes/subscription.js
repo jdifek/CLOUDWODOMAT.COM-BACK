@@ -1,10 +1,9 @@
 import express from 'express';
 import Stripe from 'stripe';
-import { PrismaClient } from '@prisma/client';
+import prisma from "../utils/prisma.js";
 import { authenticate } from '../middleware/auth.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 // Вспомогательная функция для получения настройки
@@ -34,7 +33,7 @@ router.post('/checkout', authenticate, async (req, res) => {
       payment_method_types: ['card'],
       mode: 'subscription',
       customer_email: req.user.email,
-    
+
       line_items: [
         {
           price_data: {
@@ -49,7 +48,7 @@ router.post('/checkout', authenticate, async (req, res) => {
           quantity: 1,
         },
       ],
-    
+
       success_url: `${process.env.FRONTEND_URL}/subscription?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${process.env.FRONTEND_URL}/subscription`,
       metadata: {

@@ -1,11 +1,10 @@
 import express from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
 import { authenticate, requireAdmin } from '../middleware/auth.js';
+import prisma from "../utils/prisma.js";
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 router.use(authenticate, requireAdmin);
 
@@ -24,7 +23,7 @@ router.delete('/users/:id', async (req, res) => {
 router.post('/subscriptions', async (req, res) => {
   try {
     const { userId, status, price, devicesCount, currentPeriodEnd } = req.body;
-    
+
     const subscription = await prisma.subscription.create({
       data: {
         userId,
@@ -34,7 +33,7 @@ router.post('/subscriptions', async (req, res) => {
         currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd) : null
       },
     });
-    
+
     res.json(subscription);
   } catch (error) {
     if (error.code === 'P2002') {
@@ -48,7 +47,7 @@ router.post('/subscriptions', async (req, res) => {
 router.put('/subscriptions/:id', async (req, res) => {
   try {
     const { status, price, devicesCount, currentPeriodEnd } = req.body;
-    
+
     const subscription = await prisma.subscription.update({
       where: { id: req.params.id },
       data: {
@@ -58,7 +57,7 @@ router.put('/subscriptions/:id', async (req, res) => {
         currentPeriodEnd: currentPeriodEnd ? new Date(currentPeriodEnd) : null
       },
     });
-    
+
     res.json(subscription);
   } catch (error) {
     res.status(500).json({ error: 'Failed to update subscription' });
@@ -133,9 +132,9 @@ router.get('/users/:id', async (req, res) => {
 router.post('/users', async (req, res) => {
   try {
     const { email, password, name, surname, phone, company, role, appid, saler } = req.body;
-    
+
     const passwordHash = await bcrypt.hash(password, 10);
-    
+
     const user = await prisma.user.create({
       data: { email, passwordHash, name, surname, phone, company, role: role || 'USER', appid, saler },
     });
@@ -185,7 +184,7 @@ router.post('/users/:id/impersonate', async (req, res) => {
     );
 
     // Возвращаем оба токена
-    res.json({ 
+    res.json({
       token: impersonationToken,
       adminToken: req.headers.authorization?.split(' ')[1] // Оригинальный токен админа
     });
