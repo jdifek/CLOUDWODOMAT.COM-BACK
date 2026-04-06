@@ -7,6 +7,7 @@ import adminRoutes from './routes/admin.js';
 import subscriptionRoutes from './routes/subscription.js';
 import webhookRoutes from './routes/webhook.js';
 import settingsRoutes from './routes/settings.js';
+import { startSubscriptionCron } from './utils/subscriptionCron.js';
 
 dotenv.config();
 
@@ -25,4 +26,7 @@ app.use('/api/subscription', subscriptionRoutes);
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 const PORT = process.env.PORT || 3333;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  startSubscriptionCron();
+});
