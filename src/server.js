@@ -8,6 +8,7 @@ import adminRoutes from './routes/admin.js';
 import subscriptionRoutes from './routes/subscription.js';
 import webhookRoutes from './routes/webhook.js';
 import settingsRoutes from './routes/settings.js';
+import proxyRoutes from './routes/proxy.js';
 
 import { startSubscriptionCron } from './utils/subscriptionCron.js';
 import { logger } from './utils/logger.js';
@@ -42,11 +43,13 @@ app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/subscription', subscriptionRoutes);
+app.use('/api-happy', proxyRoutes);
 
 app.get('/health', (req, res) => {
   logger.info('HEALTH CHECK');
   res.json({ status: 'ok' });
 });
+
 
 app.use((err, req, res, next) => {
   logger.error('ERROR:', {
