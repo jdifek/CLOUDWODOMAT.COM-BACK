@@ -1,7 +1,7 @@
 // routes/proxy.js
 import express from 'express';
 import fetch from 'node-fetch';
-
+import { logger } from '../utils/logger.js'; // добавь .js
 const router = express.Router();
 
 router.all('*', async (req, res) => {
