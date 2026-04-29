@@ -6,7 +6,10 @@ const router = express.Router();
 
 router.all('*', async (req, res) => {
   try {
-    const targetUrl = `http://api.happy-ti.com:2028${req.path}?${new URLSearchParams(req.query).toString()}`;
+    // Берём сырую query строку из запроса — она уже правильно закодирована
+    const queryString = req.originalUrl.split('?')[1] || '';
+    const path = req.path;
+    const targetUrl = `http://api.happy-ti.com:2028${path}${queryString ? '?' + queryString : ''}`;
 
     logger.info('→ Proxy to happy-ti:', { url: targetUrl, method: req.method });
 
@@ -19,7 +22,6 @@ router.all('*', async (req, res) => {
     });
 
     const data = await response.json();
-
     logger.info('← happy-ti response:', { status: response.status, data });
 
     res.status(response.status).json(data);
