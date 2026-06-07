@@ -10,6 +10,7 @@ import webhookRoutes from './routes/webhook.js';
 import settingsRoutes from './routes/settings.js';
 import proxyRoutes from './routes/proxy.js';
 import botRoutes from './routes/bot.js';
+import cardNotesRoutes from './routes/cardNotes.js';
 
 import { startSubscriptionCron } from './utils/subscriptionCron.js';
 import { logger } from './utils/logger.js';
@@ -46,6 +47,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api-happy', proxyRoutes);
 app.use('/api/bot', botRoutes);
+app.use('/api/card-notes', cardNotesRoutes);
 
 
 app.get('/health', (req, res) => {
