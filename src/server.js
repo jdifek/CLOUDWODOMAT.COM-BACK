@@ -18,20 +18,21 @@ import { logger } from './utils/logger.js';
 dotenv.config();
 
 const app = express();
-
 app.use(cors());
 
 app.use((req, res, next) => {
   const start = Date.now();
-
   res.on('finish', () => {
     const ms = Date.now() - start;
     logger.info(`${req.method} ${req.originalUrl} -> ${res.statusCode} (${ms}ms)`);
   });
-
   next();
 });
 
+// webhook ДО express.json() — обязательно
+app.use('/webhook', webhookRoutes);
+
+// дальше как обычно
 app.use(express.json());
 
 app.use((req, res, next) => {
@@ -39,7 +40,8 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use('/webhook', webhookRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
