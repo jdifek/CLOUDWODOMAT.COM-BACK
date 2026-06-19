@@ -24,13 +24,23 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
+        logger.info('Processing checkout.session.completed', { 
+          sessionId: session.id, 
+          metadata: session.metadata,
+          subscriptionId: session.subscription 
+        });
+      
         const userId = session.metadata.userId;
         const devicesCount = parseInt(session.metadata.devicesCount);
         const subscriptionId = session.subscription;
-
+      
         const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-
-        await prisma.subscription.upsert({
+        logger.info('Retrieved Stripe subscription', { 
+          status: subscription.status,
+          priceData: subscription.items.data[0]?.price 
+        });
+      
+        const result = await prisma.subscription.upsert({
           where: { userId },
           update: {
             stripeSubscriptionId: subscriptionId,
@@ -48,7 +58,8 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
             currentPeriodEnd: new Date(subscription.current_period_end * 1000),
           },
         });
-
+        logger.info('Subscription upserted', { result });
+      
         await prisma.payment.create({
           data: {
             userId,
@@ -57,6 +68,7 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
             status: 'succeeded',
           },
         });
+        logger.info('Payment created');
         break;
       }
 
