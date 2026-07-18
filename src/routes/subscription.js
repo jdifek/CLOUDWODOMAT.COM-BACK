@@ -16,7 +16,6 @@ async function getSetting(key, defaultValue) {
     return defaultValue;
   }
 }
-
 router.post('/checkout', authenticate, async (req, res) => {
   try {
     const { devicesCount, period = 'month' } = req.body;
@@ -28,34 +27,29 @@ router.post('/checkout', authenticate, async (req, res) => {
     const basePrice = await getSetting('BASE_PRICE', 1);
     const monthlyPrice = basePrice * devicesCount;
 
-    // Скидки и интервалы
     const periodConfig = {
-      month:  { interval: 'month', intervalCount: 1,  discount: 0,    label: '1 month' },
-      month6: { interval: 'month', intervalCount: 6,  discount: 0.10, label: '6 months' },
-      year:   { interval: 'year',  intervalCount: 1,  discount: 0.20, label: '12 months' },
+      month:  { months: 1,  discount: 0,    label: '1 month' },
+      month6: { months: 6,  discount: 0.10, label: '6 months' },
+      year:   { months: 12, discount: 0.20, label: '12 months' },
     };
 
     const config = periodConfig[period] ?? periodConfig.month;
-    const totalMonths = config.interval === 'year' ? 12 : config.intervalCount;
-    const totalPrice = monthlyPrice * totalMonths * (1 - config.discount);
+    const totalPrice = monthlyPrice * config.months * (1 - config.discount);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
-      mode: 'subscription',
+      mode: 'payment', // было 'subscription'
       customer_email: req.user.email,
       line_items: [
         {
           price_data: {
             currency: 'pln',
             product_data: {
-              name: `Subscription — ${devicesCount} device(s) / ${config.label}`,
-              description: `${basePrice} PLN/device/month${config.discount > 0 ? ` · ${config.discount * 100}% discount` : ''}`,
+              name: `Подписка — ${devicesCount} устройств(о) / ${config.label}`,
+              description: `${basePrice} PLN/устройство/месяц${config.discount > 0 ? ` · скидка ${config.discount * 100}%` : ''}`,
             },
             unit_amount: Math.round(totalPrice * 100),
-            recurring: {
-              interval: config.interval,
-              interval_count: config.intervalCount,
-            },
+            // recurring убрали — это уже не рекуррентный платёж
           },
           quantity: 1,
         },
@@ -67,6 +61,7 @@ router.post('/checkout', authenticate, async (req, res) => {
         devicesCount: devicesCount.toString(),
         basePrice: basePrice.toString(),
         period,
+        months: config.months.toString(), // понадобится в вебхуке для расчёта periodEnd
       },
     });
 

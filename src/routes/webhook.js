@@ -31,88 +31,76 @@ router.post('/stripe', express.raw({ type: 'application/json' }), async (req, re
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object;
-
+      
         const userId = session.metadata?.userId;
         const devicesCountRaw = session.metadata?.devicesCount;
-
+        const monthsRaw = session.metadata?.months;
+      
         logger.info('[webhook] checkout.session.completed payload', {
           sessionId: session.id,
           userId,
           devicesCountRaw,
-          subscriptionId: session.subscription,
+          monthsRaw,
+          paymentIntent: session.payment_intent,
           paymentStatus: session.payment_status,
           mode: session.mode,
         });
-
+      
         if (!userId) {
           throw new Error(`userId отсутствует в metadata (session ${session.id})`);
         }
-        if (!session.subscription) {
-          throw new Error(`нет subscription id (session ${session.id}), mode=${session.mode}`);
-        }
-
+      
         const devicesCount = parseInt(devicesCountRaw, 10) || 1;
-        const subscriptionId = session.subscription;
-
-        const stripeSub = await stripe.subscriptions.retrieve(subscriptionId);
-
-        const priceItem = stripeSub.items?.data?.[0]?.price;
-        if (!priceItem || typeof priceItem.unit_amount !== 'number') {
-          throw new Error(`не удалось определить price.unit_amount для subscription ${subscriptionId}`);
-        }
-
+        const months = parseInt(monthsRaw, 10) || 1;
+      
+        // Продлеваем от текущего currentPeriodEnd, если он ещё не истёк,
+        // иначе от текущего момента — чтобы повторное пополнение "докупало" время,
+        // а не сбрасывало уже оплаченный остаток.
+        const existing = await prisma.subscription.findUnique({ where: { userId } });
+        const now = new Date();
+        const base = existing?.currentPeriodEnd && existing.currentPeriodEnd > now
+          ? existing.currentPeriodEnd
+          : now;
+      
+        const currentPeriodEnd = new Date(base);
+        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + months);
+      
         const savedSub = await prisma.subscription.upsert({
           where: { userId },
           update: {
-            stripeSubscriptionId: subscriptionId,
             status: 'ACTIVE',
-            price: priceItem.unit_amount / 100,
             devicesCount,
-            currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+            currentPeriodEnd,
           },
           create: {
             userId,
-            stripeSubscriptionId: subscriptionId,
             status: 'ACTIVE',
-            price: priceItem.unit_amount / 100,
             devicesCount,
-            currentPeriodEnd: new Date(stripeSub.current_period_end * 1000),
+            currentPeriodEnd,
           },
         });
-
-        logger.info(`[webhook] ✅ Subscription upserted OK — userId=${userId}, dbId=${savedSub.id}, status=${savedSub.status}`);
-
-        // payment_intent в checkout.session для mode: 'subscription' часто null —
-        // реальный платёж лежит в invoice. Достаём его оттуда.
-        let stripePaymentId = session.payment_intent;
-
-        if (!stripePaymentId && session.invoice) {
-          const invoice = await stripe.invoices.retrieve(session.invoice);
-          stripePaymentId = invoice.payment_intent || invoice.id;
-        }
-
-        if (!stripePaymentId) {
-          logger.error(`[webhook] ⚠️ Не удалось определить stripePaymentId для session ${session.id}, invoice=${session.invoice} — Payment НЕ создан`);
-        } else {
-          await prisma.payment.upsert({
-            where: { stripePaymentId },
-            update: {
-              status: 'succeeded',
-              amount: session.amount_total / 100,
-            },
-            create: {
-              userId,
-              stripePaymentId,
-              amount: session.amount_total / 100,
-              status: 'succeeded',
-            },
-          });
-          logger.info(`[webhook] ✅ Payment upserted OK — stripePaymentId=${stripePaymentId}`);
-        }
-
+      
+        logger.info(`[webhook] ✅ Subscription upserted OK — userId=${userId}, dbId=${savedSub.id}, periodEnd=${currentPeriodEnd.toISOString()}`);
+      
+        const stripePaymentId = session.payment_intent || session.id;
+      
+        await prisma.payment.upsert({
+          where: { stripePaymentId },
+          update: {
+            status: 'succeeded',
+            amount: session.amount_total / 100,
+          },
+          create: {
+            userId,
+            stripePaymentId,
+            amount: session.amount_total / 100,
+            status: 'succeeded',
+          },
+        });
+        logger.info(`[webhook] ✅ Payment upserted OK — stripePaymentId=${stripePaymentId}`);
+      
         break;
       }
-
       case 'customer.subscription.updated': {
         const subscription = event.data.object;
 
