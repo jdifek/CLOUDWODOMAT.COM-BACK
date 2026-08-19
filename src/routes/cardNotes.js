@@ -1,10 +1,9 @@
 // routes/cardNotes.js
 import express from 'express';
-import { PrismaClient } from '@prisma/client';
 import { authenticate } from '../middleware/auth.js'; // adjust path
+import prisma from '../utils/prisma.js';
 
 const router = express.Router();
-const prisma = new PrismaClient();
 
 /**
  * GET /api/card-notes
