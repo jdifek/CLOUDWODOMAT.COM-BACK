@@ -10,12 +10,14 @@ import webhookRoutes from './routes/webhook.js';
 import settingsRoutes from './routes/settings.js';
 import proxyRoutes from './routes/proxy.js';
 import botRoutes from './routes/bot.js';
+// Стало
 import cardNotesRoutes from './routes/cardNotes.js';
+import statsRoutes from './routes/stats.js';
 
 import { startSubscriptionCron } from './utils/subscriptionCron.js';
+import { startStatsSync } from './services/statsSync.js';
 import { logger } from './utils/logger.js';
 
-dotenv.config();
 
 const app = express();
 app.use(cors());
@@ -42,14 +44,13 @@ app.use((req, res, next) => {
 
 app.use('/api/settings', settingsRoutes);
 app.use('/api/auth', authRoutes);
-app.use('/api/settings', settingsRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api-happy', proxyRoutes);
 app.use('/api/bot', botRoutes);
 app.use('/api/card-notes', cardNotesRoutes);
-
+app.use('/api/stats', statsRoutes);
 
 app.get('/health', (req, res) => {
   logger.info('HEALTH CHECK');
@@ -70,9 +71,11 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3333;
 
+// Стало
 app.listen(PORT, () => {
   logger.info(`Server running on port ${PORT}`);
   startSubscriptionCron();
+  startStatsSync();
 });
 
 process.on('uncaughtException', (err) => {

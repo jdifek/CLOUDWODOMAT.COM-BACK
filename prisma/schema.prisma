@@ -92,3 +92,56 @@ model CardNote {
 
   @@unique([userId, cardNumber])
 }
+
+// Добавить в schema.prisma (после этого: npx prisma migrate dev -n add_stats)
+
+// Сырые транзакции (потребление). Источник правды для дедупликации и пересчёта.
+model Transaction {
+  id         String   @id @default(cuid())
+  saler      String
+  payId      String                  // pay_id / key_id / alipay_number / id из китайского API
+  deviceId   String
+  location   String?
+  paidAt     DateTime                // UTC
+  day        String                  // 'YYYY-MM-DD' в STATS_TZ — день для агрегации
+  liters     Float
+  amount     Float
+  noDispense Boolean  @default(false) // оплата есть, воды 0
+  payType    String   @default("qr")  // card | cash | qr | terminal
+  raw        Json?                    // исходная запись API
+  createdAt  DateTime @default(now())
+
+  @@unique([saler, payId])
+  @@index([saler, day, deviceId])
+  @@index([saler, paidAt])
+}
+
+// Агрегат "автомат × день". Общая статистика = SUM по дням/автоматам.
+model DailyStat {
+  saler           String
+  deviceId        String
+  day             String
+  location        String?
+  liters          Float
+  amount          Float
+  txCount         Int
+  noDispenseCount Int
+  cardCount       Int      @default(0)
+  cashCount       Int      @default(0)
+  qrCount         Int      @default(0)
+  terminalCount   Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  @@id([saler, deviceId, day])
+  @@index([saler, day])
+}
+
+// Курсоры синхронизации по каждому saler
+model SyncState {
+  saler          String    @id
+  appid          String
+  syncedTo       DateTime? // верхняя граница: всё до этого момента уже загружено
+  backfilledFrom DateTime? // нижняя граница: история загружена начиная с этого момента
+  lastRunAt      DateTime?
+  lastError      String?
+}
