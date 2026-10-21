@@ -16,13 +16,12 @@ dayjs.extend(customParseFormat);
 const STATS_TZ = process.env.STATS_TZ || 'Europe/Warsaw';
 const API_TZ = 'Asia/Shanghai'; // китайский API отдаёт/принимает время в UTC+8
 
-const HISTORY_DAYS = 90;
+const RETENTION_DAYS = 1000;        // сколько дней храним в базе (удаляем только записи старше)
 const PAGE_SIZE = 20;               // API отдаёт по 20 записей на страницу
 const MAX_PAGES = 500;              // защита от бесконечного цикла
 const OVERLAP_MIN = 15;             // перекрытие окон; дубли отсекает unique(saler, payId)
 const CHUNK_HOURS = 12;             // размер одного окна запроса
-const FORWARD_CHUNKS_PER_RUN = 20;  // догон "вперёд" после простоя — в приоритете
-const BACKFILL_CHUNKS_PER_RUN = 3;  // сколько окон истории грузим за один прогон
+const FORWARD_CHUNKS_PER_RUN = 20;  // догон "вперёд" после простоя
 const REQUEST_DELAY_MS = 500;       // пауза между страницами
 const RUN_EVERY_MS = 5 * 60 * 1000;
 
@@ -61,8 +60,7 @@ function makeHealth() {
     },
   };
 }
-const fwdHealth = makeHealth();  // догон новых данных
-const backHealth = makeHealth(); // докачка истории (сбои здесь не мешают догону)
+const fwdHealth = makeHealth(); // догон новых данных
 
 // ── Одна страница с повторами и нарастающей паузой ──
 async function fetchPage(appid, saler, begin, end, page) {
@@ -212,7 +210,7 @@ async function loadWindow(acc, from, to) {
   return rows.length;
 }
 
-// ── Один аккаунт: догон вперёд + загрузка истории назад ──
+// ── Один аккаунт: только догон вперёд (историю назад не докачиваем) ──
 const inFlight = new Set(); // защита от двойного запуска (планировщик + кнопка в админке)
 
 const setError = (saler, msg) =>
@@ -241,8 +239,10 @@ async function syncAccountInner(acc) {
     update: { appid: acc.appid },
   });
 
-  // 1) Вперёд. Курсор двигается только после успешной загрузки окна —
-  //    при сбое следующая попытка продолжит с того же места, данные не теряются.
+  // Вперёд. Курсор двигается только после успешной загрузки окна —
+  // при сбое следующая попытка продолжит с того же места, данные не теряются.
+  // backfilledFrom задаётся один раз при первом запуске и дальше не меняется
+  // (нужен для getCoverage — "загружено с").
   try {
     if (!st.syncedTo) {
       const from = now.subtract(1, 'hour');
@@ -269,29 +269,12 @@ async function syncAccountInner(acc) {
     return false;
   }
 
-  // 2) Назад. Свой счётчик сбоев: проблемы со старыми данными не тормозят догон новых.
-  if (!backHealth.can(saler)) return true;
-  try {
-    const historyStart = now.subtract(HISTORY_DAYS, 'day').startOf('day');
-    let low = dayjs(st.backfilledFrom);
-    for (let i = 0; i < BACKFILL_CHUNKS_PER_RUN && low.isAfter(historyStart); i++) {
-      const prev = low.subtract(CHUNK_HOURS, 'hour');
-      const from = prev.isBefore(historyStart) ? historyStart : prev;
-      await loadWindow(acc, from, low);
-      await prisma.syncState.update({ where: { saler }, data: { backfilledFrom: from.toDate() } });
-      low = from;
-    }
-    backHealth.ok(saler);
-  } catch (err) {
-    const mins = backHealth.fail(saler);
-    logger.warn(`[stats ${saler}] backfill error, retry in ${mins} min: ${err.message}`);
-    await setError(saler, `backfill: ${err.message}`);
-  }
   return true;
 }
 
+// Удаляем только то, что старше RETENTION_DAYS (1000 дней)
 async function prune() {
-  const cutoff = dayjs().tz(STATS_TZ).subtract(HISTORY_DAYS, 'day').format('YYYY-MM-DD');
+  const cutoff = dayjs().tz(STATS_TZ).subtract(RETENTION_DAYS, 'day').format('YYYY-MM-DD');
   const a = await prisma.transaction.deleteMany({ where: { day: { lt: cutoff } } });
   const b = await prisma.dailyStat.deleteMany({ where: { day: { lt: cutoff } } });
   logger.info(`[stats] prune < ${cutoff}: tx=${a.count}, daily=${b.count}`);

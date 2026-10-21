@@ -8,6 +8,7 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 export const STATS_TZ = process.env.STATS_TZ || 'Europe/Warsaw';
+const MAX_RANGE_DAYS = 1000; // максимальный период запроса (= срок хранения в statsSync.js)
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const KEYS = [
   'liters', 'amount', 'txCount', 'noDispenseCount',
@@ -25,8 +26,8 @@ export function parseRange(q) {
   const today = dayjs().tz(STATS_TZ).format('YYYY-MM-DD');
   const to = DATE_RE.test(q.to) ? q.to : today;
   const from = DATE_RE.test(q.from) ? q.from : dayjs(to).subtract(29, 'day').format('YYYY-MM-DD');
-  if (dayjs(to).diff(dayjs(from), 'day') > 90) {
-    throw Object.assign(new Error('Max range is 90 days'), { status: 400 });
+  if (dayjs(to).diff(dayjs(from), 'day') > MAX_RANGE_DAYS) {
+    throw Object.assign(new Error(`Max range is ${MAX_RANGE_DAYS} days`), { status: 400 });
   }
   return { from, to };
 }
