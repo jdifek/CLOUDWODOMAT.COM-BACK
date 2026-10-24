@@ -1,4 +1,4 @@
-// services/statsQuery.js — общие запросы статистики (используют и /api/stats, и /api/admin/stats)
+// services/statsQuery.js — общие запросы статистики (используют и /api/stats, и /api/admin/stats) — белорусская версия
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc.js';
 import timezone from 'dayjs/plugin/timezone.js';
