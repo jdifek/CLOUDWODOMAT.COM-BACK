@@ -8,7 +8,8 @@ import adminRoutes from './routes/admin.js';
 import subscriptionRoutes from './routes/subscription.js';
 import webhookRoutes from './routes/webhook.js';
 import settingsRoutes from './routes/settings.js';
-import proxyRoutes from './routes/proxy.js';
+import proxyRoutes from './routes/proxy.js'
+import chinaRelayRoutes from './routes/chinaRelay.js';;
 import botRoutes from './routes/bot.js';
 // Стало
 import cardNotesRoutes from './routes/cardNotes.js';
@@ -51,7 +52,7 @@ app.use('/api-happy', proxyRoutes);
 app.use('/api/bot', botRoutes);
 app.use('/api/card-notes', cardNotesRoutes);
 app.use('/api/stats', statsRoutes);
-
+app.use('/china-relay', chinaRelayRoutes);
 app.get('/health', (req, res) => {
   logger.info('HEALTH CHECK');
   res.json({ status: 'ok' });
