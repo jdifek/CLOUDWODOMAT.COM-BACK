@@ -8,7 +8,7 @@ const TARGET = (process.env.HAPPY_TARGET || 'http://api.happy-ti.com:2028').repl
 router.use(express.raw({ type: '*/*', limit: '1mb' }));
 
 router.use(async (req, res) => {
-  const token = process.env.PARTNER_RELAY_TOKEN;
+  const token = process.env.RELAY_TOKEN;
   const prefix = `/${token}/`;
   if (!token || !req.url.startsWith(prefix)) return res.sendStatus(404);
 
