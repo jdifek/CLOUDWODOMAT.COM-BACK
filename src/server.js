@@ -11,6 +11,8 @@ import settingsRoutes from './routes/settings.js';
 import proxyRoutes from './routes/proxy.js'
 import chinaRelayRoutes from './routes/chinaRelay.js';;
 import botRoutes from './routes/bot.js';
+import partnerRelayRoutes from './routes/partnerRelay.js';
+
 // Стало
 import cardNotesRoutes from './routes/cardNotes.js';
 import statsRoutes from './routes/stats.js';
@@ -34,6 +36,7 @@ app.use((req, res, next) => {
 
 // webhook ДО express.json() — обязательно
 app.use('/webhook', webhookRoutes);
+app.use('/partner-relay', partnerRelayRoutes); // до express.json()
 
 // дальше как обычно
 app.use(express.json());
